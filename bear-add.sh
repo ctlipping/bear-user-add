@@ -2,10 +2,23 @@
 #bear-add by clipping
 
 #uncomment this for production
-#basedir=/remote/cfengine/
-basedir=`pwd`
+basedir=/remote/cfengine/
+#basedir=`pwd`
 bears=(bearbin snowbear fibear seisbear)
 ushell="bash"
+
+function call_help {
+    echo "Usage: bear-user-add.sh (options)"
+    echo ----------------
+    echo Options:
+    echo \-u \| --user : Specify username
+    echo \-i \| --id : Specify UserID
+    echo -n \-g \| --group : Specify group \(probably users\)
+    echo -e "\n-e" \| --email : Specify email
+    echo \-s \| --shell : Specify shell \(default bash\)
+    echo \-h \| --help : Shows this help menu
+    exit 0
+}
 
 function check_exist {
     if [ `grep ":$userID:" passwd | wc -l` != 0 ]; then
@@ -37,6 +50,7 @@ function get_input {
         read email
     fi
 }
+
 function get_product {
     if [ "${bears[$i]}" = "bearbin" ]; then
         product="server_rhel6"
@@ -51,6 +65,8 @@ echo "Note: To use this tool, you need a numeric UID from www-hpcs.lbl.gov"
 
 while test $# -gt 0; do
     case "$1" in
+        -h | --help)
+            call_help;;
         -u | --user)
             shift
         uname=$1
@@ -90,11 +106,11 @@ do
     
     check_exist
     
-    #co -l passwd
+    co -l passwd
     echo $passwd_tmp >> passwd
-    #rcsdiff passwd
-    #ci -u -m"bear-add for $USER \($userID:$group_id\)" passwd
-    #cmpush -a
+    rcsdiff passwd
+    ci -u -m"bear-add for $USER \($userID:$group_id\)" passwd
+    cmpush -a
     echo Added $uname to $current...
 
 
