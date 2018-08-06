@@ -2,6 +2,8 @@
 #bear-add by clipping
 
 #uncomment this for production
+dry=""
+dry2=""
 basedir=/remote/cfengine/
 bears=(bearbin snowbear fibear seisbear)
 ushell="bash"
@@ -61,7 +63,6 @@ function get_product {
         product="server_rhel7"
     fi
 }
-echo "Note: To use this tool, you need a numeric UID from www-hpcs.lbl.gov"
 
 
 while test $# -gt 0; do
@@ -90,12 +91,21 @@ while test $# -gt 0; do
             shift;;
         -t | --test)
         basedir=`pwd -P`
+        dry2="echo #"
+            shift;;
+        -d | --dry)
+        dry="echo"
             shift;;
         *)
             break;;
     esac
 done
-
+echo "To use this tool, you need a numeric UID from www-hpcs.lbl.gov"
+if [ -z "$dry2" ]; then
+    printf "\033[1;31mNote: The -t option is not set. YOU ARE IN PRODUCTION.\033[0m\n"
+else
+    printf "\033[1;32mNote: The -t option is set. You are NOT IN PRODUCTION.\033[0m\n"
+fi
 get_input
 
 group_id=$(getent group $group | cut -d ":" -f3)
@@ -107,14 +117,15 @@ do
     get_product
 
     cd $basedir/product_$product/${current}.lbl.gov/etc
-    
+    pwd   
     check_exist
     
-    #co -l passwd
+    $dry2 co -l passwd
+    cp passwd passwd.old
     echo $passwd_tmp >> passwd
-    #rcsdiff passwd
-    #ci -u -m"bear-add for $USER \($userID:$group_id\)" passwd
-    #cmpush -a
+    $dry2 rcsdiff passwd
+    $dry2 ci -u -m"bear-add for $uname \($userID:$group_id\)" passwd
+    $dry2 cmpush -a
     echo Added $uname to $current...
 
 
@@ -122,6 +133,6 @@ do
         echo "\"C=US/O=Globus/O=LBNL HPCS/CN=`echo $email | cut -d \",\" -f 1 | tr [a-z] [A-Z]`\" $uname"
     fi
 
-    echo ssh $current \"mkdir /data/home/$uname\; cp /etc/skel/.\[a-zA-z0-9\]* /data/home/$uname\; chown -R $uname:$group_id /data/home/$uname\"
+    $dry2 ssh $current \"mkdir /data/home/$uname\; cp /etc/skel/.\[a-zA-z0-9\]* /data/home/$uname\; chown -R $uname:$group_id /data/home/$uname\"
 done
 

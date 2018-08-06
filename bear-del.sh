@@ -1,6 +1,6 @@
 #!/bin/bash
 
-basedir=`pwd -P`
+basedir=/remote/cfengine/
 
 function call_help {
     echo bear-del: Remove a user from bear systems
@@ -23,13 +23,19 @@ function get_product {
 }
 
 function verify {
-    echo "WARNING: You are removing user $uname from all BEAR systems."
+    if [ $basedir == "/remote/cfengine/" ]; then
+        printf "\033[1;31mNote: the -t option is not set.  YOU ARE IN PRODUCTION\n"
+    else
+        printf "\033[1;32mNote: the -t option is set.  You are NOT IN PRODUCTION\n"
+    fi
+    printf "WARNING: You are removing user $uname from all BEAR systems.\033[0m\n"
     echo -n "Proceed (y/n)? "
     read PROCEED
     case "$PROCEED" in
         Y|y|Yes|yes) return 1;;
         *)           echo Aborting... ;exit 0;;
     esac
+
 }
 
 userID="$(id -u $uname)"
