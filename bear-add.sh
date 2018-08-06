@@ -3,11 +3,11 @@
 
 #uncomment this for production
 basedir=/remote/cfengine/
-#basedir=`pwd`
 bears=(bearbin snowbear fibear seisbear)
 ushell="bash"
 
 function call_help {
+    echo bear-add: Create a user account for all bear systems.
     echo "Usage: bear-user-add.sh (options)"
     echo ----------------
     echo Options:
@@ -17,6 +17,7 @@ function call_help {
     echo -e "\n-e" \| --email : Specify email
     echo \-s \| --shell : Specify shell \(default bash\)
     echo \-h \| --help : Shows this help menu
+    echo \-t \| --test : Use for testing environment \(not production\)
     exit 0
 }
 
@@ -87,6 +88,9 @@ while test $# -gt 0; do
             shift
         ushell=$1
             shift;;
+        -t | --test)
+        basedir=`pwd -P`
+            shift;;
         *)
             break;;
     esac
@@ -106,11 +110,11 @@ do
     
     check_exist
     
-    co -l passwd
+    #co -l passwd
     echo $passwd_tmp >> passwd
-    rcsdiff passwd
-    ci -u -m"bear-add for $USER \($userID:$group_id\)" passwd
-    cmpush -a
+    #rcsdiff passwd
+    #ci -u -m"bear-add for $USER \($userID:$group_id\)" passwd
+    #cmpush -a
     echo Added $uname to $current...
 
 

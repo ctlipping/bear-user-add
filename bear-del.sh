@@ -1,35 +1,86 @@
 #!/bin/bash
 
-get_product {
-    if [ "${ARRAY[$i]}" = "bearbin" ]; then
+basedir=`pwd -P`
+
+function call_help {
+    echo bear-del: Remove a user from bear systems
+    echo Usage: bear-del \(-u\|-h\) 
+    echo -------------------
+    echo -u \| --user : specify user for deletion
+    echo -h \| --help : call this help prompt
+    echo -t \| --test : test run \(not production\)
+    exit 0
+}
+
+function get_product {
+    if [ "$current" = "bearbin" ]; then
         product="server_rhel6"
-    elif [ "${$ARRAY[$i]}" = "snowbear" ]; then
+    elif [ "$current" = "snowbear" ]; then
         product="cluster_rhel6"
     else
         product="server_rhel7"
     fi
 }
 
-USER="$0"
-UID="$(id -u $USER)"
-ARRAY=(bearbin snowbear fibear seisbear)
+function verify {
+    echo "WARNING: You are removing user $uname from all BEAR systems."
+    echo -n "Proceed (y/n)? "
+    read PROCEED
+    case "$PROCEED" in
+        Y|y|Yes|yes) return 1;;
+        *)           echo Aborting... ;exit 0;;
+    esac
+}
 
-echo "WARNING: You are removing user $USER from all BEAR systems."
-echo "Proceed (y/n)? "
-read PROCEED
-case "$PROCEED" in
-    Y|y|Yes|yes)    return 0 ;;
-    *)              return 1 ;;
-esac
+userID="$(id -u $uname)"
+bears=(bearbin snowbear fibear seisbear)
+
+while test $# -gt 0; do
+    case "$1" in
+        -u | --user)
+            shift
+            uname=$1
+            shift;;
+        -t | --test)
+            basedir=`pwd -P`
+            shift;;
+        -h | --help)
+            call_help;;
+        *)
+            break;;
+    esac
+done
+
+if [ -z $uname ]; then
+    echo -n "Enter user to remove: "
+    read uname
+fi
+
+verify
 
 for i in {0..3};
 do
+    current=${bears[$i]}
     get_product
+    cd $basedir/product_$product/${current}.lbl.gov/etc
+    #co -l passwd
+    exist=`fgrep "${uname}:" passwd | wc -l`
+    if [ $exist == 0 ]; then
+        echo ERROR: User does not exist on $current
+        echo Files have not been modified.
+        continue
+    fi
+    sed "/${uname}/d" passwd >> passwd.new
+    if [ `diff passwd passwd.new | wc -l` != 2 ]; then
+        echo ERROR: internal sanity check failed.
+        echo Files have not been modified.
+        echo Aborting...
+        exit 1
+    fi
+    mv passwd passwd.bak
+    mv passwd.new passwd
+    #rcsdiff passwd
 
-    cd /remote/cfengine/product_$product/${ARRAY[$i]}.lbl.gov/etc
-    co -l passwd
-    sed '/$USER/d' ./passwd -i
-    rcsdiff passwd
-    ci -u -m"bear-user-del for $USER \($UID:100\)" passwd
-    cmpush -a
+    #ci -u -m"bear-user-del for $USER \($UID:100\)" passwd
+    #cmpush -a
 done
